@@ -1,0 +1,133 @@
+# ═══════════════════════════════════════════════════════════════
+#  GitHub Actions — Deploy automático no VPS (EasyPanel)
+# ═══════════════════════════════════════════════════════════════
+#
+# Gatilhos:
+#   - push na branch main
+#   - pull_request na branch main (opcional — descomentar se quiser)
+#
+# Secrets necessários (configurar em:
+#   https://github.com/elsieneurogen-rgb/medical_soap/settings/secrets/actions):
+#
+#   VPS_HOST        — IP ou domínio do VPS
+#   VPS_USER        — usuário SSH (ex: root, deploy)
+#   VPS_SSH_KEY     — chave SSH privada (PEM, multiline)
+#   VPS_PORT        — porta SSH (padrão 22)
+#
+# O que o deploy faz:
+#   1. Conecta via SSH no VPS
+#   2. Entrra na pasta do projeto
+#   3. Faz git pull (atualiza código)
+#   4. Reconstrói a imagem Docker do backend
+#   5. Recria os containers (postgres mantém dados)
+#   6. Verifica saúde do backend
+#
+# Notas:
+#   - O volume postgres_data é persistente → dados não se perdem
+#   - Se quiser backup automático do banco, adicione um step opcional
+#     com pg_dump (ver seção "BACKUP OPCIONAL" abaixo)
+# ═══════════════════════════════════════════════════════════════
+
+name: Deploy VPS — SOAP Psiquiatria
+
+on:
+  push:
+    branches:
+      - main
+  # Descomentar para também rodar em pull requests (deploy de teste)
+  # pull_request:
+  #   branches:
+  #     - main
+
+# Permissões mínimas necessárias
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy no VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout do código ───────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Deploy via SSH no VPS ───────────────────────────
+      - name: Deploy on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            # ── Entrar na pasta do projeto ──────────────────────
+            cd /opt/soap_psiquiatria
+
+            # ── Atualizar código do repositório ─────────────────
+            git pull origin main
+
+            # ── Reconstruir imagem Docker (leve, apenas Python) ─
+            docker compose build --no-cache backend || docker compose build backend
+
+            # ── Recriar containers (postgres mantém o volume) ───
+            docker compose up -d --force-recreate backend nginx
+
+            # ── Esperar backend ficar saudável ──────────────────
+            echo "Aguardando backend ficar saudável..."
+            for i in $(seq 1 30); do
+              if curl -sf http://localhost:5000/health > /dev/null 2>&1; then
+                echo "✓ Backend 온라인 — deploy concluído"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "✗ Backend não ficou saudável após 30s"
+                exit 1
+              fi
+              sleep 1
+            done
+
+            # ── Log de status ────────────────────────────────────
+            echo "=== Status dos containers ==="
+            docker compose ps
+            echo "=== Logs recentes do backend ==="
+            docker compose logs --tail=20 backend
+
+      # ── 3. Notificação (opcional) ───────────────────────────
+      # Descomentar e configurar se quiser receber notificação
+      # em Telegram/Discord/Email ao término do deploy.
+      #
+      # - name: Notify on Telegram
+      #   if: always()
+      #   uses: appleboy/telegram-action@master
+      #   with:
+      #     token: ${{ secrets.TELEGRAM_TOKEN }}
+      #     to: ${{ secrets.TELEGRAM_CHAT_ID }}
+      #     message: |
+      #       🚀 Deploy SOAP Psiquiatria
+      #       Repo: ${{ github.repository }}
+      #       Commit: ${{ github.sha }}
+      #       Status: ${{ job.status }}
+      #       VPS: ${{ secrets.VPS_HOST }}
+
+      # ── 4. Backup do banco (opcional) ───────────────────────
+      # Descomentar se quiser backup automático do PostgreSQL
+      # antes de cada deploy. O backup vai para /backup/ no VPS.
+      #
+      # - name: Backup PostgreSQL (opcional)
+      #   if: always()
+      #   uses: appleboy/ssh-action@v1.0.3
+      #   with:
+      #     host: ${{ secrets.VPS_HOST }}
+      #     username: ${{ secrets.VPS_USER }}
+      #     key: ${{ secrets.VPS_SSH_KEY }}
+      #     port: ${{ secrets.VPS_PORT || '22' }}
+      #     script: |
+      #       mkdir -p /backup
+      #       docker compose exec -T postgres pg_dump \
+      #         -U ${DB_USER:-postgres} \
+      #         ${DB_NAME:-soap_psiquiatria} \
+      #         | gzip > /backup/soap_$(date +%Y%m%d_%H%M%S).sql.gz
+      #       # Manter só os últimos 7 backups
+      #       ls -t /backup/soap_*.sql.gz | tail -n +8 | xargs -r rm
