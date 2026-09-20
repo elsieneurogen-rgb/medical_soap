@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOAP Psiquiatria — Prontuário Eletrônico</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f0f4f8; --surface: #fff; --border: #d0d9e4;
+    --text: #1a202c; --text-muted: #64748b;
+    --primary: #2563eb; --primary-hover: #1d4ed8; --primary-light: #dbeafe;
+    --danger: #dc2626; --danger-bg: #fef2f2;
+    --success: #16a34a; --success-bg: #f0fdf4;
+    --warn: #d97706; --warn-bg: #fffbeb;
+    --info: #0891b2; --info-bg: #ecfeff;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.10);
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --soap-s: #7c3aed; --soap-o: #0891b2; --soap-a: #d97706; --soap-p: #16a34a;
+    --pgx-green: #065f46; --pgx-green-bg: #d1fae5;
+  }
+  html, body { height: 100%; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; font-size: 15px; }
+  .app { display: flex; flex-direction: column; height: 100vh; max-width: 1300px; margin: 0 auto; padding: 0 16px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0;
+  }
+  header h1 { font-size: 1rem; font-weight: 600; letter-spacing: -0.01em; }
+  header h1 span { color: var(--primary); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .pgx-badge {
+    font-size: 11px; padding: 4px 10px; border-radius: 12px;
+    background: var(--pgx-green-bg); color: var(--pgx-green); font-weight: 600;
+    display: none; align-items: center; gap: 5px;
+  }
+  .pgx-badge.show { display: flex; }
+  .pgx-badge.error { background: var(--danger-bg); color: var(--danger); }
+  .header-actions { display: flex; gap: 8px; }
+
+  .toolbar {
+    display: flex; gap: 8px; padding: 8px 0; flex-shrink: 0;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; align-items: center;
+  }
+  .toolbar button {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 6px 14px; font-size: 13px; font-family: var(--font); color: var(--text);
+    cursor: pointer; transition: all 0.12s; display: flex; align-items: center; gap: 6px;
+  }
+  .toolbar button:hover { background: var(--bg); border-color: var(--text-muted); }
+  .toolbar button.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .toolbar button.primary:hover { background: var(--primary-hover); }
+  .toolbar button.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .toolbar button svg { width: 14px; height: 14px; }
+  .toolbar .spacer { flex: 1; }
+
+  .main { display: flex; flex: 1; gap: 0; overflow: hidden; min-height: 0; }
+  .sidebar {
+    width: 240px; flex-shrink: 0; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .sidebar-header {
+    padding: 12px; border-bottom: 1px solid var(--border);
+    font-weight: 600; font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-muted);
+  }
+  .patient-list { padding: 8px; }
+  .patient-item {
+    padding: 10px 12px; border-radius: var(--radius); cursor: pointer;
+    border: 1px solid transparent; margin-bottom: 4px; transition: all 0.1s; font-size: 13px;
+  }
+  .patient-item:hover { background: var(--bg); }
+  .patient-item.active { background: var(--primary-light); border-color: var(--primary); }
+  .patient-item .name { font-weight: 500; }
+  .patient-item .meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .content { flex: 1; overflow-y: auto; padding: 20px; background: var(--bg); }
+  .soap-form { display: flex; flex-direction: column; gap: 14px; }
+
+  .soap-section {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+    overflow: hidden; border-left: 4px solid;
+  }
+  .soap-section.s { border-left-color: var(--soap-s); }
+  .soap-section.o { border-left-color: var(--soap-o); }
+  .soap-section.a { border-left-color: var(--soap-a); }
+  .soap-section.p { border-left-color: var(--soap-p); }
+
+  .soap-header {
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .soap-header .letter {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .soap-section.s .letter { background: var(--soap-s); }
+  .soap-section.o .letter { background: var(--soap-o); }
+  .soap-section.a .letter { background: var(--soap-a); }
+  .soap-section.p .letter { background: var(--soap-p); }
+  .soap-header h2 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .soap-header .portuguese { font-size: 12px; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+  .soap-body { padding: 16px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .form-group textarea, .form-group select, .form-group input[type="text"], .form-group input[type="date"] {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: var(--font); font-size: 14px; background: var(--bg); color: var(--text);
+    resize: vertical; transition: border-color 0.1s;
+  }
+  .form-group textarea:focus, .form-group input:focus, .form-group select:focus {
+    outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+  }
+  .form-group textarea { min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  .pgx-panel {
+    background: var(--pgx-green-bg); border: 1px solid #a7f3d0;
+    border-radius: var(--radius); padding: 12px 14px; margin-top: 12px;
+    display: none;
+  }
+  .pgx-panel.open { display: block; }
+  .pgx-panel .pgx-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  }
+  .pgx-panel .pgx-header h3 {
+    font-size: 13px; font-weight: 700; color: var(--pgx-green);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pgx-panel .pgx-header .close-pgx {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 18px; padding: 2px; line-height: 1;
+  }
+  .pgx-panel .pgx-section {
+    background: #fff; border: 1px solid #a7f3d0; border-radius: 6px;
+    padding: 10px 12px; margin-bottom: 8px;
+  }
+  .pgx-panel .pgx-section:last-child { margin-bottom: 0; }
+  .pgx-panel .pgx-section h4 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--pgx-green); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .pgx-panel .pgx-section p, .pgx-panel .pgx-section li { font-size: 13px; }
+  .pgx-panel .pgx-section ul { padding-left: 18px; }
+  .pgx-panel .pgx-section li { margin-bottom: 2px; }
+  .pgx-panel .score-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+  }
+  .score-badge.level-a { background: var(--success-bg); color: var(--success); }
+  .score-badge.level-b { background: var(--info-bg); color: var(--info); }
+  .score-badge.level-c { background: var(--warn-bg); color: var(--warn); }
+  .score-badge.level-d { background: var(--danger-bg); color: var(--danger); }
+  .score-badge.no-level { background: var(--bg); color: var(--text-muted); }
+
+  .scale-block {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px; margin-bottom: 12px; background: var(--bg);
+  }
+  .scale-block h3 { font-size: 13px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .scale-block h3 .score { margin-left: auto; background: var(--primary); color: #fff; border-radius: 12px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+
+  .med-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .med-table th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--text-muted); padding: 6px 8px; border-bottom: 1px solid var(--border); background: var(--bg);
+  }
+  .med-table td { padding: 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .med-table td:first-child { width: 30%; }
+  .med-table td:nth-child(2) { width: 10%; }
+  .med-table td:nth-child(3) { width: 10%; }
+  .med-table td:nth-child(4) { width: 12%; }
+  .med-table td:nth-child(5) { width: 18%; }
+  .med-table td:nth-child(6) { width: 8%; text-align: center; }
+  .med-table td:nth-child(7) { width: 12%; text-align: center; }
+  .med-table input, .med-table select {
+    width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px;
+    font-size: 13px; font-family: var(--font); background: var(--bg);
+  }
+  .med-table input:focus, .med-table select:focus { outline: none; border-color: var(--primary); }
+  .med-table .pgx-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 4px; cursor: pointer;
+    background: var(--pgx-green-bg); color: var(--pgx-green); border: 1px solid #a7f3d0;
+    transition: all 0.1s;
+  }
+  .med-table .pgx-btn:hover { background: #a7f3d0; }
+  .med-table .pgx-btn.active { background: var(--pgx-green); color: #fff; border-color: var(--pgx-green); }
+  .med-table .pgx-btn svg { width: 14px; height: 14px; }
+  .btn-add {
+    background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius);
+    padding: 8px 12px; font-size: 12px; color: var(--text-muted); cursor: pointer;
+    width: 100%; margin-top: 8px; transition: all 0.1s;
+  }
+  .btn-add:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .btn-remove {
+    background: transparent; border: none; color: var(--danger); cursor: pointer;
+    font-size: 18px; padding: 2px; line-height: 1; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center; border-radius: 4px;
+  }
+  .btn-remove:hover { background: var(--danger-bg); }
+
+  .info-banner {
+    background: var(--warn-bg); border: 1px solid #fcd34d; border-radius: var(--radius);
+    padding: 12px 16px; font-size: 13px; color: #92400e;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .info-banner svg { flex-shrink: 0; margin-top: 2px; }
+
+  .signature-block {
+    border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px;
+    display: flex; gap: 20px; align-items: flex-end;
+  }
+  .signature-block .field { flex: 1; }
+  .signature-block label {
+    display: block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 4px;
+  }
+  .signature-block input {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: var(--font); font-size: 14px; background: var(--bg);
+  }
+  .signature-block input:focus { outline: none; border-color: var(--primary); }
+
+  .print-preview {
+    background: #fff; color: #000; font-family: 'Times New Roman', serif;
+    font-size: 12pt; line-height: 1.7; padding: 40px; max-width: 800px; margin: 0 auto;
+  }
+  .print-preview .section { margin-bottom: 18px; }
+  .print-preview .section h2 {
+    font-size: 11pt; text-transform: uppercase; border-bottom: 1px solid #ccc;
+    padding-bottom: 4px; margin-bottom: 8px; letter-spacing: 0.05em;
+  }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--text); color: #fff; padding: 12px 20px; border-radius: var(--radius);
+    font-size: 13px; box-shadow: var(--shadow-lg);
+    opacity: 0; transform: translateY(10px); transition: all 0.2s;
+    pointer-events: none; z-index: 1000;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state svg { margin-bottom: 16px; opacity: 0.4; }
+  .empty-state h3 { font-size: 15px; margin-bottom: 8px; color: var(--text); }
+
+  .no-patient {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; text-align: center; color: var(--text-muted); gap: 12px;
+  }
+  .no-patient svg { opacity: 0.3; }
+  .no-patient h3 { font-size: 15px; color: var(--text); }
+
+  .patient-form-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    display: flex; align-items: center; justify-content: center; z-index: 900;
+  }
+  .patient-form-modal {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+    width: 420px; max-width: 90vw; padding: 24px;
+  }
+  .patient-form-modal h2 { font-size: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+  .patient-form-modal .form-group { margin-bottom: 12px; }
+  .patient-form-modal .form-group input {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 14px; font-family: var(--font); background: var(--bg);
+  }
+  .patient-form-modal .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+  @media print {
+    header, .toolbar, .sidebar, .signature-block, .btn-add, .btn-remove,
+    .no-patient, .toast, .pgx-panel, .patient-form-overlay { display: none !important; }
+    .main { display: block; }
+    .content { padding: 0; background: #fff; }
+    .soap-form { display: block; }
+    body { background: #fff; }
+  }
+  @media (max-width: 768px) {
+    .main { flex-direction: column; }
+    .sidebar { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid var(--border); }
+    .form-row, .form-row-3 { grid-template-columns: 1fr; }
+    .content { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><span>🧠 SOAP Psiquiatria</span> — Prontuário Eletrônico</h1>
+    <div class="header-right">
+      <div class="pgx-badge" id="pgxStatusBadge">
+        <span id="pgxStatusIcon">✓</span>
+        <span id="pgxStatusText">Conectado</span>
+      </div>
+      <div class="header-actions">
+        <button onclick="exportDB()" title="Exportar dados (JSON)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar
+        </button>
+        <button onclick="printNote()" title="Imprimir consulta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir
+        </button>
+        <button class="primary" onclick="window.location.reload()" title="Recarregar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.9A6.5 6.5 0 0 0 18 3.5"/></svg>
+          Recarregar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button class="primary" onclick="openNewPatientModal()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Novo paciente
+    </button>
+    <button onclick="saveNote()" title="Salvar consulta SOAP">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Salvar consulta
+    </button>
+    <button onclick="printNote()" title="Ver pré-visualização e imprimir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Pré-visão
+    </button>
+    <button class="danger" onclick="deleteCurrentNote()" title="Excluir consulta atual">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      Excluir
+    </button>
+    <div class="spacer"></div>
+    <button onclick="hideAllPgxPanels()" id="clearPgxBtn" style="display:none;" title="Fechar todos os painéis PGx">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      Fechar PGx
+    </button>
+  </div>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="sidebar-header">Pacientes (<span id="patientCount">0</span>)</div>
+      <div class="patient-list" id="patientList">
+        <div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <p>Nenhum paciente cadastrado</p>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content" id="soapContent">
+      <div class="no-patient">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        <h3>Nenhuma consulta aberta</h3>
+        <p>Selecione um paciente na lista ou crie um novo para iniciar uma consulta SOAP.</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal: Novo Paciente -->
+<div class="patient-form-overlay" id="newPatientModal" style="display:none;">
+  <div class="patient-form-modal">
+    <h2>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Novo paciente
+    </h2>
+    <div class="form-group"><label>Nome completo</label><input type="text" id="newPatientName" placeholder="Ex: Maria Silva" autofocus></div>
+    <div class="form-row">
+      <div class="form-group"><label>Data de nascimento</label><input type="date" id="newPatientDob"></div>
+      <div class="form-group"><label>Sexo</label>
+        <select id="newPatientSex"><option value="">—</option><option value="M">Masculino</option><option value="F">Feminino</option><option value="O">Outro</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>CPF / Identificador (opcional)</label><input type="text" id="newPatientId" placeholder="000.000.000-00"></div>
+    <div class="form-group"><label>Alergias / Contraindicações</label><input type="text" id="newPatientAllergies" placeholder="Ex: Litio — dermatite"></div>
+    <div class="modal-actions">
+      <button style="border:1px solid var(--border);background:var(--bg);padding:8px 16px;border-radius:var(--radius);cursor:pointer;" onclick="closeNewPatientModal()">Cancelar</button>
+      <button class="primary" style="padding:8px 16px;border-radius:var(--radius);cursor:pointer;" onclick="createPatient()">Criar paciente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Pré-visualização -->
+<div class="patient-form-overlay" id="printModal" style="display:none;">
+  <div class="patient-form-modal" style="width:700px;max-width:95vw;padding:0;overflow:hidden;">
+    <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="font-size:15px;">Pré-visualização da consulta</h2>
+      <button style="border:1px solid var(--border);background:var(--bg);border-radius:4px;padding:6px 12px;cursor:pointer;font-size:13px;" onclick="closePrintModal()">Fechar</button>
+    </div>
+    <div class="print-preview" id="printPreview" style="margin:0;padding:24px;"></div>
+    <div style="padding:12px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="window.print()" style="border:1px solid var(--border);background:var(--bg);border-radius:4px;padding:6px 14px;cursor:pointer;font-size:13px;">Imprimir</button>
+      <button onclick="closePrintModal()" style="border:1px solid var(--border);background:var(--bg);border-radius:4px;padding:6px 14px;cursor:pointer;font-size:13px;">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  SOAP Psiquiatria — Frontend ( produção )
+//  Consome backend Flask/PostgreSQL via REST API
+// ═══════════════════════════════════════════════════════════════
+
+// Configuração: URL do backend. Em produção, o nginx faz reverse proxy.
+// Durante desenvolvimento local: http://localhost:5000
+// Em produção no VPS: mesma origem (nginx serve tanto front quanto API)
+const API_BASE = ''; // mesma origem — nginx reverse proxy
+let currentPatientId = null;
+let currentNoteId = null;
+let pgxConnected = false;
+
+function apiFetch(path, options = {}) {
+  const url = API_BASE + path;
+  return fetch(url, {
+    headers: { 'Accept': 'application/json', ...options.headers },
+    ...options
+  }).then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+    return r.json();
+  });
+}
+
+// ── Status PGx ──────────────────────────────────────────────────
+function setPgxStatus(connected, text, isError = false) {
+  const badge = document.getElementById('pgxStatusBadge');
+  if (!badge) return;
+  const icon = document.getElementById('pgxStatusIcon');
+  const label = document.getElementById('pgxStatusText');
+  if (connected || isError) {
+    badge.classList.add('show');
+    badge.className = 'pgx-badge' + (isError ? ' error' : '');
+    icon.textContent = isError ? '⚠' : '✓';
+    label.textContent = text || (isError ? 'Servidor indisponível' : 'Conectado ao PGx');
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+async function checkPgxConnection() {
+  try {
+    const resp = await fetch(API_BASE + '/api/pgx/lookup?gene=CYP2D6&drug=tamoxifeno', {
+      method: 'GET', headers: { 'Accept': 'application/json' }
+    });
+    pgxConnected = resp.ok;
+    setPgxStatus(pgxConnected, pgxConnected ? 'PGx online — PubMed · PharmGKB · CPIC' : 'Servidor PGx indisponível', !pgxConnected);
+    if (pgxConnected) document.getElementById('clearPgxBtn').style.display = 'inline-flex';
+  } catch(e) {
+    pgxConnected = false;
+    setPgxStatus(false, 'Servidor PGx indisponível', true);
+  }
+}
+
+// ── API: Pacientes ──────────────────────────────────────────────
+
+async function apiListPatients() {
+  return apiFetch('/api/patients');
+}
+
+async function apiCreatePatient(name, dob, sex, identifier, allergies) {
+  return apiFetch('/api/patients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, dob, sex, identifier, allergies })
+  });
+}
+
+async function apiDeletePatient(id) {
+  return apiFetch('/api/patients/' + id, { method: 'DELETE' });
+}
+
+async function apiListNotes(patientId) {
+  return apiFetch('/api/patients/' + patientId + '/notes');
+}
+
+async function apiCreateNote(noteData) {
+  return apiFetch('/api/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(noteData)
+  });
+}
+
+async function apiUpdateNote(id, noteData) {
+  return apiFetch('/api/notes/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(noteData)
+  });
+}
+
+async function apiDeleteNote(id) {
+  return apiFetch('/api/notes/' + id, { method: 'DELETE' });
+}
+
+// ── Estado local (cache simples em memória para não spamar API) ─
+let patientsCache = [];
+let notesCache = {};
+
+async function refreshPatients() {
+  try {
+    patientsCache = await apiListPatients();
+    renderPatientList();
+  } catch(e) {
+    console.error('Falha ao listar pacientes:', e);
+    showToast('Erro ao carregar pacientes. Verifique o backend.', 'error');
+  }
+}
+
+async function refreshNotes(patientId) {
+  try {
+    notesCache[patientId] = await apiListNotes(patientId);
+  } catch(e) {
+    console.error('Falha ao listar consultas:', e);
+  }
+}
+
+// ── Renderização ────────────────────────────────────────────────
+
+function renderPatientList() {
+  const countEl = document.getElementById('patientCount');
+  const listEl = document.getElementById('patientList');
+  if (!patientsCache.length) {
+    countEl.textContent = '0';
+    listEl.innerHTML = `<div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <p>Nenhum paciente cadastrado</p></div>`;
+    return;
+  }
+  countEl.textContent = patientsCache.length;
+  let html = '';
+  for (const p of patientsCache) {
+    const age = p.dob ? calcAge(p.dob) : '—';
+    const sexLabel = { 'M': 'M', 'F': 'F', 'O': 'O' } [p.sex] || '—';
+    const idStr = p.identifier || '';
+    const noteCount = (notesCache[p.id] || []).length;
+    html += `<div class="patient-item ${currentPatientId == p.id ? 'active' : ''}" onclick="selectPatient(${p.id})">
+      <div class="name">${escHtml(p.name)}</div>
+      <div class="meta">${age} anos · ${sexLabel}${idStr ? ' · ' + idStr : ''}</div>
+      <div class="meta" style="font-size:11px;color:var(--primary);">${noteCount} consulta(s)</div>
+    </div>`;
+  }
+  listEl.innerHTML = html;
+}
+
+function calcAge(dob) {
+  if (!dob) return null;
+  const [y,m,d] = dob.split('-').map(Number);
+  const birth = new Date(y, m-1, d);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  if (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function escHtml(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+
+function selectPatient(id) {
+  currentPatientId = id;
+  currentNoteId = null;
+  document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('sig_date').value = new Date().toISOString().split('T')[0];
+  // Limpa formulário
+  document.querySelectorAll('.soap-form input, .soap-form textarea, .soap-form select').forEach(el => {
+    if (el.type !== 'button') el.value = '';
+  });
+  document.getElementById('soapContent').innerHTML = '<div class="soap-form" id="soapForm"></div>';
+  renderPatientList();
+  buildSOAPForm();
+  hideAllPgxPanels();
+}
+
+// ── Modal controls ──────────────────────────────────────────────
+
+function openNewPatientModal() { document.getElementById('newPatientModal').style.display = 'flex'; document.getElementById('newPatientName').focus(); }
+function closeNewPatientModal() {
+  document.getElementById('newPatientModal').style.display = 'none';
+  ['newPatientName','newPatientDob','newPatientSex','newPatientId','newPatientAllergies'].forEach(id => document.getElementById(id).value = '');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeNewPatientModal(); closePrintModal(); } });
+
+async function createPatient() {
+  const name = document.getElementById('newPatientName').value.trim();
+  if (!name) { showToast('Nome é obrigatório', 'error'); return; }
+  const dob = document.getElementById('newPatientDob').value;
+  const sex = document.getElementById('newPatientSex').value;
+  const identifier = document.getElementById('newPatientId').value.trim();
+  const allergies = document.getElementById('newPatientAllergies').value.trim();
+  try {
+    const p = await apiCreatePatient(name, dob, sex, identifier, allergies);
+    closeNewPatientModal();
+    patientsCache.push(p);
+    renderPatientList();
+    selectPatient(p.id);
+    showToast('Paciente ' + name + ' criado', 'success');
+  } catch(e) {
+    showToast('Erro ao criar: ' + e.message, 'error');
+  }
+}
+
+async function deletePatient(id) {
+  if (!confirm('Excluir paciente e todas as consultas associadas?')) return;
+  try {
+    await apiDeletePatient(id);
+    if (currentPatientId === id) {
+      currentPatientId = null;
+      currentNoteId = null;
+      document.getElementById('soapContent').innerHTML = `
+        <div class="no-patient">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <h3>Nenhuma consulta aberta</h3>
+          <p>Selecione um paciente na lista ou crie um novo.</p>
+        </div>`;
+    }
+    patientsCache = patientsCache.filter(p => p.id !== id);
+    delete notesCache[id];
+    renderPatientList();
+    showToast('Paciente excluído', 'success');
+  } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+// ── Construção do Formulário SOAP ───────────────────────────────
+
+function buildSOAPForm() {
+  const container = document.getElementById('soapForm');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="info-banner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div><strong>Atenção:</strong> Dados clínicos confidenciais. O prontuário é armazenado no banco PostgreSQL do servidor. O módulo <strong>PGx</strong> integra PubMed, PharmGKB e diretrizes CPIC — use-o para consultar evidências de farmacogenômica antes de prescrever.</div>
+    </div>
+    <div class="soap-form">
+      <div class="form-row">
+        <div class="form-group"><label>Data da sessão</label><input type="date" id="sessionDate" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div class="form-group"><label>Psiquiatra responsável</label><input type="text" id="psychiatrist" placeholder="Dr(a). Seu Nome"></div>
+      </div>
+      <div class="soap-section s">
+        <div class="soap-header"><div class="letter">S</div><div><h2>Subjetivo</h2><div class="portuguese">O que o paciente relata</div></div></div>
+        <div class="soap-body">
+          <div class="form-group"><label>Queixa principal</label><textarea id="subj_complaint" placeholder="Ex: 'Sinto ansiedade há 3 meses, dificuldade para dormir...'"></textarea></div>
+          <div class="form-group"><label>História da doença atual</label><textarea id="subj_history" placeholder="Evolução dos sintomas, início, circunstâncias..."></textarea></div>
+          <div class="form-row">
+            <div class="form-group"><label>Histórico prévio de doença mental</label><textarea id="subj_prev_illness" placeholder="Episódios anteriores, internações..."></textarea></div>
+            <div class="form-group"><label>Histórico familiar</label><textarea id="subj_family" placeholder="DP, transtornos na família..."></textarea></div>
+          </div>
+          <div class="form-group"><label>Medicamentos atuais (pré-existentes)</label><textarea id="subj_current_meds" placeholder="Ex: Sertralina 50mg/d — use há 2 anos"></textarea></div>
+          <div class="form-group"><label>Álcool / substância / tabaco</label><textarea id="subj_substances" placeholder="Consumo de álcool, drogas, tabaco..."></textarea></div>
+          <div class="form-group"><label>Observações subjetivas adicionais</label><textarea id="subj_extra" placeholder="Outros relatos relevantes..."></textarea></div>
+        </div>
+      </div>
+      <div class="soap-section o">
+        <div class="soap-header"><div class="letter">O</div><div><h2>Objetivo</h2><div class="portuguese">Exame mental e dados clínicos</div></div></div>
+        <div class="soap-body">
+          <div class="form-group"><label>Apresentação / comportamento</label><textarea id="obj_presentation" placeholder="Ex: paciente sentado, contato visual precário, fala lenta..."></textarea></div>
+          <div class="form-row-3">
+            <div class="form-group"><label>Afet / humor</label>
+              <select id="obj_affect"><option value="">—</option><option value="normal">Normal / euti mólico</option><option value="depressed">Deprimido</option><option value="anxious">Ansioso</option><option value="irritable">Irritável</option><option value="labile">Labil</option><option value="blunted">Embotado / alogia</option><option value="euthymic">Euti mólico</option><option value="other">Outro</option></select>
+            </div>
+            <div class="form-group"><label>Processo de pensamento</label>
+              <select id="obj_thinking"><option value="">—</option><option value="logical">Lógico / coerente</option><option value="tangential">Tangencial</option><option value="loose">Associações soltas</option><option value="circumstantial">Circunstancial</option><option value="flight">Fuga de ideias</option><option value="blocked">Bloqueio de ideias</option><option value="other">Outro</option></select>
+            </div>
+            <div class="form-group"><label>Conteúdo de pensamento</label>
+              <select id="obj_thought_content"><option value="">—</option><option value="normal">Normal</option><option value="delusions">Delusões</option><option value="obsessions">Obsessões</option><option value="preoccupations">Preocupações excessivas</option><option value="suicidal">Ideação suicida</option><option value="homicidal">Ideação homicida</option><option value="other">Outro</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Percepção</label>
+              <select id="obj_perception"><option value="">—</option><option value="none">Sem alterações</option><option value="auditory">Alucinações auditivas</option><option value="visual">Alucinações visuais</option><option value="olfactory">Alucinações olfativas</option><option value="tactile">Alucinações táteis</option><option value="other">Outro</option></select>
+            </div>
+            <div class="form-group"><label>Consciência / orientação</label>
+              <select id="obj_orientation"><option value="">—</option><option value="oriented">Orientado(a) (tempo, espaço, pessoa)</option><option value="partial">Orientação parcial</option><option value="disoriented">Desorientado(a)</option><option value="confused">Confuso(a)</option></select>
+            </div>
+          </div>
+          <div class="form-group"><label>Cognition / Memória / Concentração</label><textarea id="obj_cognition" placeholder="Memória de curto prazo, atenção..."></textarea></div>
+          <div class="form-group"><label>Exame físico / sinais vitais</label><textarea id="obj_vitals" placeholder="PA: 120x80 | FC: 80 bpm | Temp: 36,5°C | Peso: 70kg..."></textarea></div>
+          <div style="margin-top:12px;">
+            <div class="scale-block"><h3>PHQ-9 — Depressão <span class="score" id="phq9Score">0 / 27</span></h3>${phq9Form()}</div>
+            <div class="scale-block"><h3>GAD-7 — Ansiedade <span class="score" id="gad7Score">0 / 21</span></h3>${gad7Form()}</div>
+            <div class="scale-block"><h3>C-SSRS — Risco Suicida (Columbia) <span class="score" id="cssrsScore">—</span></h3>${cssrsForm()}</div>
+          </div>
+        </div>
+      </div>
+      <div class="soap-section a">
+        <div class="soap-header"><div class="letter">A</div><div><h2>Avaliação</h2><div class="portuguese">Diagnóstico e avaliação do estado</div></div></div>
+        <div class="soap-body">
+          <div class="form-group"><label>Diagnóstico principal (CID-10 / DSM-5)</label><textarea id="ass_diag" placeholder="Ex: F32.1 — Episódio depressivo moderado (DSM-5)"></textarea></div>
+          <div class="form-group"><label>Diagnóstico secundário / comorbidades</label><textarea id="ass_secondary" placeholder="Ex: F41.1 — Transtorno de ansiedade generalizada"></textarea></div>
+          <div class="form-group"><label>Avaliação global do estado</label><textarea id="ass_global" placeholder="Síntese: severidade, funcionamento, insight, julgamento..."></textarea></div>
+          <div class="form-group"><label>Risco atual (autolesão / suicídio / violência)</label><textarea id="ass_risk" placeholder="Avaliação de risco: ideação, planejamento, intento, acesso a meios..."></textarea></div>
+          <div class="form-group"><label>Evolução desde a última sessão</label><textarea id="ass_evolution" placeholder="Melhora, piora, estabilidade, efeitos colaterais..."></textarea></div>
+        </div>
+      </div>
+      <div class="soap-section p">
+        <div class="soap-header"><div class="letter">P</div><div><h2>Plano</h2><div class="portuguese">Tratamento e seguimento</div></div></div>
+        <div class="soap-body">
+          <div class="form-group"><label>Medicamentos (nova prescrição ou ajuste)</label>
+            <div id="medList">
+              <table class="med-table" id="medTable">
+                <thead><tr>
+                  <th>Medicamento</th><th>Dose</th><th>Via</th><th>Frequência</th><th>Observações</th><th></th><th></th>
+                </tr></thead>
+                <tbody id="medBody"></tbody>
+              </table>
+              <button class="btn-add" onclick="addMedRow()">+ Adicionar medicamento</button>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:14px;"><label>Psicoterapia / intervenções não-farmacológicas</label><textarea id="plan_psychotherapy" placeholder="Ex: TCC — 1x/semana, foco em reestruturação cognitiva..."></textarea></div>
+          <div class="form-group"><label>Encaminhamentos / referrals</label><textarea id="plan_referrals" placeholder="Ex: Encaminhar para análise de TSH, referência a cardiologista..."></textarea></div>
+          <div class="form-group"><label>Próxima sessão (data / frequência)</label><textarea id="plan_next" placeholder="Ex: Retorno em 15 dias — 28/03"></textarea></div>
+          <div class="form-group"><label>Orientações para o paciente / familiares</label><textarea id="plan_others" placeholder="Educação psiquíatrica, orientações sobre adesão, sinais de alerta..."></textarea></div>
+          <div class="signature-block">
+            <div class="field"><label>Nome do psiquiatra</label><input type="text" id="sig_name" placeholder="Dr(a). Nome Sobrenome"></div>
+            <div class="field"><label>CRM / registro</label><input type="text" id="sig_crm" placeholder="CRM-SP 12345"></div>
+            <div class="field"><label>Data da assinatura</label><input type="date" id="sig_date"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  if (currentNoteId) loadCurrentNote();
+  document.getElementById('sig_date').value = new Date().toISOString().split('T')[0];
+}
+
+// ── Escalas ─────────────────────────────────────────────────────
+
+function phq9Form() {
+  const items = [
+    ['1','Pouco interesse ou prazer nas atividades'],
+    ['2','Sentimento de desesperança / deprimido(a)'],
+    ['3','Dificuldade para dormir ou dormir muito'],
+    ['4','Sentimento de cansado(a) / sem energia'],
+    ['5','Pouco apetite ou comer em excesso'],
+    ['6','Sentimento de que está falhando(a) ou se desvalorizando'],
+    ['7','Dificuldade para concentrar em leituras / TV'],
+    ['8','Movimento lento ou agitado — outros notam'],
+    ['9','Pensamentos de estar morto(a) ou se machucar'],
+  ];
+  return items.map(([n,l]) => `
+    <div class="scale-item">
+      <span class="label">${n}. ${l}</span>
+      <div class="radio-group">
+        ${[0,1,2,3].map(v => `<input type="radio" name="phq9_${n}" value="${v}" onchange="calcPHQ9()" ${v===0?'checked':''}>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function gad7Form() {
+  const items = [
+    ['1','Nervoso(a) / ansioso(a)'],
+    ['2','Não conseguir parar de preocupar'],
+    ['3','Preocupado(a) em excesso'],
+    ['4','Dificuldade para relaxar'],
+    ['5','Muito agitado(a) — difícil manter calmo'],
+    ['6','Sentindo medo como se algo ruim acontecesse'],
+    ['7','Voltando a atividades ainda ansioso(a)'],
+  ];
+  return items.map(([n,l]) => `
+    <div class="scale-item">
+      <span class="label">${n}. ${l}</span>
+      <div class="radio-group">
+        ${[0,1,2,3].map(v => `<input type="radio" name="gad7_${n}" value="${v}" onchange="calcGAD7()" ${v===0?'checked':''}>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function cssrsForm() {
+  const items = [
+    'Ideação passiva — desejar estar morto(a) sem plano',
+    'Ideação ativa — pensar em morrer com algum plano',
+    'Ter plano específico para suicídio',
+    'Tentativa de suicídio recente',
+    'Preparando-se (adquirindo meios, escrevendo carta)',
+  ];
+  return items.map((label, i) => `
+    <div class="scale-item">
+      <span class="label">${label}</span>
+      <div class="radio-group" style="gap:8px;">
+        <input type="radio" name="cssrs_${i}" value="não" onchange="calcCSSRS()" checked>
+        <span style="font-size:11px;color:var(--text-muted);">Não</span>
+        <input type="radio" name="cssrs_${i}" value="sim" onchange="calcCSSRS()">
+        <span style="font-size:11px;color:var(--danger);font-weight:600;">Sim</span>
+      </div>
+    </div>`).join('');
+}
+
+function calcPHQ9() {
+  let t = 0;
+  for (let i = 1; i <= 9; i++) { const s = document.querySelector(`input[name="phq9_${i}"]:checked`); if (s) t += parseInt(s.value); }
+  const el = document.getElementById('phq9Score');
+  if (el) { el.textContent = `${t} / 27`; el.style.background = t >= 15 ? 'var(--danger)' : t >= 10 ? 'var(--warn)' : 'var(--primary)'; }
+}
+function calcGAD7() {
+  let t = 0;
+  for (let i = 1; i <= 7; i++) { const s = document.querySelector(`input[name="gad7_${i}"]:checked`); if (s) t += parseInt(s.value); }
+  const el = document.getElementById('gad7Score');
+  if (el) { el.textContent = `${t} / 21`; el.style.background = t >= 15 ? 'var(--danger)' : t >= 10 ? 'var(--warn)' : 'var(--primary)'; }
+}
+function calcCSSRS() {
+  let c = 0;
+  document.querySelectorAll('input[name^="cssrs_"]').forEach(i => { if (i.checked && i.value === 'sim') c++; });
+  const el = document.getElementById('cssrsScore');
+  if (el) { el.textContent = c === 0 ? 'Baixo risco' : `${c} item(ns) positivo(s)`; el.style.background = c === 0 ? 'var(--success)' : 'var(--danger)'; }
+}
+
+// ── Medicamentos ────────────────────────────────────────────────
+
+function addMedRow(name='', dose='', via='', freq='', obs='') {
+  const tbody = document.getElementById('medBody');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><input type="text" name="med_name" placeholder="Ex: Fluoxetina" value="${escHtml(name)}"></td>
+    <td><input type="text" name="med_dose" placeholder="20mg" value="${escHtml(dose)}"></td>
+    <td>
+      <select name="med_via">
+        <option value="oral">Oral</option><option value="oral_liquido">Oral (líquido)</option>
+        <option value="sublingual">Sublingual</option><option value="im">IM</option>
+        <option value="iv">IV</option><option value="outro">Outro</option>
+      </select>
+    </td>
+    <td>
+      <select name="med_freq">
+        <option value="1x/dia">1x ao dia</option><option value="2x/dia">2x ao dia</option>
+        <option value="3x/dia">3x ao dia</option><option value="4x/dia">4x ao dia</option>
+        <option value="ao_dormir">Ao dormir</option><option value="ao_acordar">Ao acordar</option>
+        <option value="pré_refeição">Pré-refeição</option><option value="pós_refeição">Pós-refeição</option>
+        <option value="outro">Outro</option>
+      </select>
+    </td>
+    <td><input type="text" name="med_obs" placeholder="Observações" value="${escHtml(obs)}"></td>
+    <td style="text-align:center;">
+      <button class="pgx-btn" onclick="togglePgxForRow(this)" title="Consultar farmacogenômica (PubMed + PharmGKB + CPIC)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </td>
+    <td style="text-align:center;">
+      <button class="btn-remove" onclick="this.closest('tr').remove()" title="Remover">×</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+}
+
+async function togglePgxForRow(btnEl) {
+  const tr = btnEl.closest('tr');
+  const medName = tr.querySelector('[name="med_name"]')?.value.trim();
+  if (!medName) { showToast('Informe o nome do medicamento primeiro', 'error'); return; }
+
+  btnEl.classList.toggle('active');
+  const existing = tr.querySelector('.pgx-panel');
+  if (existing) existing.remove();
+
+  const panel = document.createElement('div');
+  panel.className = 'pgx-panel open';
+  panel.innerHTML = `
+    <div class="pgx-header">
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Farmacogenômica — ${escHtml(medName)}</h3>
+      <button class="close-pgx" onclick="this.closest('.pgx-panel').remove(); this.closest('tr').querySelector('.pgx-btn').classList.remove('active')">×</button>
+    </div>
+    <div id="pgx_content"><div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px;">Consultando PubMed · PharmGKB · CPIC...</div></div>
+  `;
+  tr.appendChild(panel);
+  await lookupPgxForDrug(medName, panel);
+}
+
+async function lookupPgxForDrug(drugName, panelEl) {
+  const content = panelEl.querySelector('#pgx_content');
+  if (!content) return;
+  content.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:13px;"><span class="score-badge" style="background:var(--primary);color:#fff;">Consultando...</span><br><small>PubMed + PharmGKB + CPIC</small></div>';
+
+  try {
+    const data = await apiFetch('/api/pgx/lookup?drug=' + encodeURIComponent(drugName));
+    content.innerHTML = renderPgxResult(data, drugName);
+  } catch(err) {
+    content.innerHTML = `<div class="pgx-section" style="color:var(--danger);background:var(--danger-bg);border-color:#fca5a5;">
+      <h4>⚠ Erro na consulta</h4>
+      <p>Não foi possível consultar o servidor PGx: ${escHtml(err.message)}</p>
+      <p style="font-size:11px;color:var(--text-muted);">Verifique se o backend Flask está rodando e acessível.</p>
+    </div>`;
+  }
+}
+
+function renderPgxResult(data, drugName) {
+  const parts = [];
+  const pgkbDrug = data.pharmgkb_drug;
+  const pgkbGene = data.pharmgkb_gene;
+  const pgkbPair = data.pharmgkb_pair;
+  const cpic = data.cpic;
+  const pubmed = data.pubmed || [];
+
+  if (pgkbDrug) {
+    parts.push(`
+      <div class="pgx-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4"/></svg> PharmGKB — ${escHtml(drugName)}</h4>
+        <p><strong>Nome:</strong> ${escHtml(pgkbDrug.label || pgkbDrug.name || drugName)}</p>
+        <p><strong>Descrição:</strong> ${escHtml((pgkbDrug.description || '').slice(0,300))}${(pgkbDrug.description||'').length > 300 ? '...' : ''}</p>
+        ${pgkbDrug.pharmClass ? `<p><strong>Classe farmacológica:</strong> ${escHtml(pgkbDrug.pharmClass)}</p>` : ''}
+      </div>`);
+  }
+
+  if (pgkbPair) {
+    parts.push(`
+      <div class="pgx-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Relação Gene-Droga (PharmGKB)</h4>
+        <ul>
+          ${Object.entries(pgkbPair).filter(([k,v]) => k !== 'name' && v).map(([k,v]) => `<li><strong>${k}:</strong> ${escHtml(String(v).slice(0,200))}${String(v).length > 200 ? '...' : ''}</li>`).join('')}
+        </ul>
+      </div>`);
+  } else if (pgkbGene) {
+    const genes = pgkbGene.variants ? pgkbGene.variants.slice(0,5) : [];
+    if (genes.length) {
+      parts.push(`
+        <div class="pgx-section">
+          <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Genes associados (${escHtml(drugName)})</h4>
+          <ul>${genes.map(g => `<li>${escHtml(g.label || g.name || JSON.stringify(g))}</li>`).join('')}</ul>
+          <p style="font-size:11px;color:var(--text-muted);">Genes com variantes farmacogenômicas relevantes.</p>
+        </div>`);
+    }
+  }
+
+  if (cpic && cpic.guidelines && cpic.guidelines.length) {
+    parts.push(`
+      <div class="pgx-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg> Diretrizes CPIC — ${escHtml(drugName)}</h4>
+        <ul>
+          ${cpic.guidelines.map(g => `
+            <li>
+              <strong>${escHtml(g.gene)} + ${escHtml(g.drug)}:</strong>
+              <a href="${escHtml(g.url)}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline;">${escHtml(g.title)}</a>
+              <span class="score-badge ${g.level ? 'level-' + g.level.toLowerCase() : 'no-level'}" style="margin-left:6px;">${(g.level || 'info')}</span>
+            </li>`).join('')}
+        </ul>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+          CPIC = <em>Clinical Pharmacogenetics Implementation Consortium</em>.
+          Nível A: validado/recomendado · B: sugerido · C: potencialmente útil · D: não recomendado.
+        </p>
+      </div>`);
+  } else if (cpic && cpic.guidelines) {
+    parts.push(`
+      <div class="pgx-section" style="background:var(--bg);border-color:var(--border);">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> CPIC</h4>
+        <p>Nenhuma diretriz CPIC específica encontrada para <strong>${escHtml(drugName)}</strong>.</p>
+        <p style="font-size:11px;color:var(--text-muted);">Verifique em <a href="https://www.pharmgkb.org" target="_blank" rel="noopener" style="color:var(--primary);">PharmGKB</a>.</p>
+      </div>`);
+  }
+
+  if (pubmed.length) {
+    parts.push(`
+      <div class="pgx-section">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Literatura PubMed — ${pubmed.length} artigo(s)</h4>
+        <ul>
+          ${pubmed.map(art => `
+            <li>
+              <a href="https://pubmed.ncbi.nlm.nih.gov/${escHtml(art.pmid || '')}" target="_blank" rel="noopener" style="font-weight:600;color:var(--primary);text-decoration:underline;font-size:13px;">${escHtml(art.title || '(sem título)')}</a>
+              <p style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escHtml(art.abstract_short || '')}</p>
+              <p style="font-size:10px;color:var(--text-muted);margin-top:4px;">PMID: ${escHtml(art.pmid)} | ${escHtml(art.date || '')}</p>
+            </li>`).join('')}
+        </ul>
+      </div>`);
+  } else {
+    parts.push(`
+      <div class="pgx-section" style="background:var(--bg);border-color:var(--border);">
+        <h4><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> PubMed</h4>
+        <p>Nenhum artigo encontrado para <strong>${escHtml(drugName)}</strong>.</p>
+      </div>`);
+  }
+
+  if (!parts.length) {
+    return `<div class="pgx-section" style="background:var(--bg);border-color:var(--border);"><p>Nenhuma informação encontrada no PubMed, PharmGKB ou CPIC para <strong>${escHtml(drugName)}</strong>.</p></div>`;
+  }
+  return parts.join('');
+}
+
+function hideAllPgxPanels() {
+  document.querySelectorAll('.pgx-panel').forEach(p => p.remove());
+  document.querySelectorAll('.pgx-btn.active').forEach(b => b.classList.remove('active'));
+}
+
+// ── Salvar / Carregar / Excluir ─────────────────────────────────
+
+async function saveNote() {
+  if (!currentPatientId) { showToast('Selecione um paciente', 'error'); return; }
+  const session_date = document.getElementById('sessionDate').value;
+  if (!session_date) { showToast('Data é obrigatória', 'error'); return; }
+
+  const medRows = document.querySelectorAll('#medBody tr');
+  const medications = [];
+  medRows.forEach(row => {
+    const name = row.querySelector('[name="med_name"]')?.value.trim();
+    if (!name) return;
+    medications.push({
+      name,
+      dose: row.querySelector('[name="med_dose"]')?.value.trim() || '',
+      via: row.querySelector('[name="med_via"]')?.value || '',
+      freq: row.querySelector('[name="med_freq"]')?.value || '',
+      obs: row.querySelector('[name="med_obs"]')?.value.trim() || '',
+    });
+  });
+
+  const data = {
+    patient_id: currentPatientId,
+    session_date,
+    psychiatrist: document.getElementById('psychiatrist').value.trim(),
+    subjective: {
+      complaint: document.getElementById('subj_complaint').value,
+      history: document.getElementById('subj_history').value,
+      prev_illness: document.getElementById('subj_prev_illness').value,
+      family: document.getElementById('subj_family').value,
+      current_meds: document.getElementById('subj_current_meds').value,
+      substances: document.getElementById('subj_substances').value,
+      extra: document.getElementById('subj_extra').value,
+      phq9: calcPHQ9Get(),
+      gad7: calcGAD7Get(),
+      cssrs: calcCSSRSGet(),
+    },
+    objective: {
+      presentation: document.getElementById('obj_presentation').value,
+      affect: document.getElementById('obj_affect').value,
+      thinking: document.getElementById('obj_thinking').value,
+      thought_content: document.getElementById('obj_thought_content').value,
+      perception: document.getElementById('obj_perception').value,
+      orientation: document.getElementById('obj_orientation').value,
+      cognition: document.getElementById('obj_cognition').value,
+      vitals: document.getElementById('obj_vitals').value,
+    },
+    assessment: {
+      diagnosis: document.getElementById('ass_diag').value,
+      secondary: document.getElementById('ass_secondary').value,
+      global: document.getElementById('ass_global').value,
+      risk: document.getElementById('ass_risk').value,
+      evolution: document.getElementById('ass_evolution').value,
+    },
+    plan: {
+      medications,
+      psychotherapy: document.getElementById('plan_psychotherapy').value,
+      referrals: document.getElementById('plan_referrals').value,
+      next_session: document.getElementById('plan_next').value,
+      others: document.getElementById('plan_others').value,
+    },
+    signature: {
+      name: document.getElementById('sig_name').value.trim(),
+      crm: document.getElementById('sig_crm').value.trim(),
+      date: document.getElementById('sig_date').value,
+    }
+  };
+
+  try {
+    if (currentNoteId) {
+      await apiUpdateNote(currentNoteId, data);
+      showToast('Atualização salva', 'success');
+    } else {
+      const note = await apiCreateNote(data);
+      currentNoteId = note.id;
+      showToast('Consulta salva', 'success');
+    }
+  } catch(e) {
+    showToast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
+function calcPHQ9Get() { let t=0; for(let i=1;i<=9;i++){const s=document.querySelector(`input[name="phq9_${i}"]:checked`); if(s) t+=parseInt(s.value);} return t; }
+function calcGAD7Get() { let t=0; for(let i=1;i<=7;i++){const s=document.querySelector(`input[name="gad7_${i}"]:checked`); if(s) t+=parseInt(s.value);} return t; }
+function calcCSSRSGet() { let c=0; document.querySelectorAll('input[name^="cssrs_"]').forEach(i=>{if(i.checked&&i.value==='sim')c++;}); return c; }
+
+async function loadCurrentNote() {
+  if (!currentNoteId || !currentPatientId) return;
+  try {
+    const notes = await apiListNotes(currentPatientId);
+    const note = notes.find(n => n.id === currentNoteId);
+    if (!note) { currentNoteId = null; return; }
+
+    document.getElementById('sessionDate').value = note.session_date || '';
+    document.getElementById('psychiatrist').value = note.psychiatrist || '';
+    document.getElementById('sig_name').value = note.signature?.name || '';
+    document.getElementById('sig_crm').value = note.signature?.crm || '';
+    document.getElementById('sig_date').value = note.signature?.date || '';
+
+    if (note.subjective) {
+      const s = typeof note.subjective === 'string' ? JSON.parse(note.subjective) : note.subjective;
+      document.getElementById('subj_complaint').value = s.complaint || '';
+      document.getElementById('subj_history').value = s.history || '';
+      document.getElementById('subj_prev_illness').value = s.prev_illness || '';
+      document.getElementById('subj_family').value = s.family || '';
+      document.getElementById('subj_current_meds').value = s.current_meds || '';
+      document.getElementById('subj_substances').value = s.substances || '';
+      document.getElementById('subj_extra').value = s.extra || '';
+    }
+    if (note.objective) {
+      const o = typeof note.objective === 'string' ? JSON.parse(note.objective) : note.objective;
+      document.getElementById('obj_presentation').value = o.presentation || '';
+      document.getElementById('obj_affect').value = o.affect || '';
+      document.getElementById('obj_thinking').value = o.thinking || '';
+      document.getElementById('obj_thought_content').value = o.thought_content || '';
+      document.getElementById('obj_perception').value = o.perception || '';
+      document.getElementById('obj_orientation').value = o.orientation || '';
+      document.getElementById('obj_cognition').value = o.cognition || '';
+    }
+    document.getElementById('obj_vitals').value = note.objective?.vitals || note.objective_vitals || '';
+    document.getElementById('ass_diag').value = note.assessment?.diagnosis || note.assessment_diagnosis || '';
+    document.getElementById('ass_secondary').value = note.assessment?.secondary || '';
+    document.getElementById('ass_global').value = note.assessment?.global || '';
+    document.getElementById('ass_risk').value = note.assessment?.risk || note.assessment_risk || '';
+    document.getElementById('ass_evolution').value = note.assessment?.evolution || note.assessment_evolution || '';
+
+    if (note.plan?.medications) {
+      document.getElementById('medBody').innerHTML = '';
+      note.plan.medications.forEach(m => addMedRow(m.name, m.dose, m.via, m.freq, m.obs));
+    }
+    document.getElementById('plan_psychotherapy').value = note.plan?.psychotherapy || '';
+    document.getElementById('plan_referrals').value = note.plan?.referrals || '';
+    document.getElementById('plan_next').value = note.plan?.next_session || '';
+    document.getElementById('plan_others').value = note.plan?.others || '';
+  } catch(e) {
+    console.error('Falha ao carregar consulta:', e);
+    showToast('Erro ao carregar consulta', 'error');
+  }
+}
+
+async function deleteCurrentNote() {
+  if (!currentNoteId) { showToast('Nenhuma consulta para excluir', 'error'); return; }
+  if (!confirm('Excluir esta consulta SOAP?')) return;
+  try {
+    await apiDeleteNote(currentNoteId);
+    currentNoteId = null;
+    document.getElementById('soapContent').innerHTML = '<div class="soap-form" id="soapForm"></div>';
+    buildSOAPForm();
+    showToast('Consulta excluída', 'success');
+  } catch(e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+// ── Exportar dados (JSON) ───────────────────────────────────────
+
+async function exportDB() {
+  if (!currentPatientId) { showToast('Nenhum paciente selecionado', 'error'); return; }
+  try {
+    const [patients, notes] = await Promise.all([
+      apiListPatients(),
+      apiListNotes(currentPatientId)
+    ]);
+    const blob = new Blob([JSON.stringify({ patients, notes }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `soap_export_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Exportação JSON baixada', 'success');
+  } catch(e) { showToast('Erro na exportação: ' + e.message, 'error'); }
+}
+
+// ── Pré-visualização ────────────────────────────────────────────
+
+function printNote() {
+  const preview = document.getElementById('printPreview');
+  const today = document.getElementById('sessionDate').value || new Date().toLocaleDateString('pt-BR');
+  let html = `
+    <div style="text-align:right;font-size:10pt;color:#555;">${today}</div>
+    <div style="margin:16px 0;border-top:2px solid #000;border-bottom:1px solid #000;padding:8px 0;font-size:14pt;font-weight:bold;text-align:center;">CONSULTA PSICHIÁTRICA — PRONTUÁRIO SOAP</div>
+    <div style="text-align:center;font-size:10pt;color:#555;margin-bottom:24px;">Psiquiatra: ${escHtml(document.getElementById('psychiatrist').value || '—')}${document.getElementById('sig_crm').value ? ' · CRM: ' + escHtml(document.getElementById('sig_crm').value) : ''}</div>
+  `;
+
+  const sections = [
+    { letter:'S', title:'SUBJETIVO — O que o paciente relata', color:'#7c3aed', fields:[
+      ['Queixa principal', document.getElementById('subj_complaint').value],
+      ['História da doença atual', document.getElementById('subj_history').value],
+      ['Histórico prévio', document.getElementById('subj_prev_illness').value],
+      ['Histórico familiar', document.getElementById('subj_family').value],
+      ['Medicamentos atuais', document.getElementById('subj_current_meds').value],
+      ['Álcool / substâncias', document.getElementById('subj_substances').value],
+      ['Observações adicionais', document.getElementById('subj_extra').value],
+      ['PHQ-9 (Depressão)', document.getElementById('phq9Score')?.textContent || '—'],
+      ['GAD-7 (Ansiedade)', document.getElementById('gad7Score')?.textContent || '—'],
+      ['C-SSRS (Risco suicida)', document.getElementById('cssrsScore')?.textContent || '—'],
+    ]},
+    { letter:'O', title:'OBJETIVO — Exame mental e dados clínicos', color:'#0891b2', fields:[
+      ['Apresentação / comportamento', document.getElementById('obj_presentation').value],
+      ['Afet / humor', document.getElementById('obj_affect').value],
+      ['Processo de pensamento', document.getElementById('obj_thinking').value],
+      ['Conteúdo de pensamento', document.getElementById('obj_thought_content').value],
+      ['Percepção', document.getElementById('obj_perception').value],
+      ['Orientação / consciência', document.getElementById('obj_orientation').value],
+      ['Cognition / memória', document.getElementById('obj_cognition').value],
+      ['Sinais vitais / exame físico', document.getElementById('obj_vitals').value],
+    ]},
+    { letter:'A', title:'AVALIAÇÃO — Diagnóstico e estado', color:'#d97706', fields:[
+      ['Diagnóstico principal (CID/DSM)', document.getElementById('ass_diag').value],
+      ['Diagnóstico secundário', document.getElementById('ass_secondary').value],
+      ['Avaliação global do estado', document.getElementById('ass_global').value],
+      ['Risco (auto/heterolesão)', document.getElementById('ass_risk').value],
+      ['Evolução', document.getElementById('ass_evolution').value],
+    ]},
+    { letter:'P', title:'PLANO — Tratamento e seguimento', color:'#16a34a', fields:[
+      ['Medicamentos prescritos', (() => {
+        const rows = document.querySelectorAll('#medBody tr');
+        return Array.from(rows).map(r => {
+          const n = r.querySelector('[name="med_name"]')?.value;
+          const d = r.querySelector('[name="med_dose"]')?.value;
+          const v = r.querySelector('[name="med_via"]')?.value;
+          const f = r.querySelector('[name="med_freq"]')?.value;
+          return n ? `${n} ${d} ${v} ${f}`.trim() : null;
+        }).filter(Boolean).join('\n• ') || '—';
+      })()],
+      ['Psicoterapia / intervenções', document.getElementById('plan_psychotherapy').value],
+      ['Encaminhamentos', document.getElementById('plan_referrals').value],
+      ['Próxima sessão', document.getElementById('plan_next').value],
+      ['Orientações', document.getElementById('plan_others').value],
+      ['Assinatura', `${document.getElementById('sig_name').value || '—'}${document.getElementById('sig_crm').value ? ' · CRM: ' + document.getElementById('sig_crm').value : ''}`],
+    ]},
+  ];
+
+  for (const sec of sections) {
+    html += `<div class="section"><h2 style="color:${sec.color};">${sec.letter}. ${sec.title}</h2>`;
+    for (const [label, value] of sec.fields) {
+      if (!value) continue;
+      html += `<div style="margin-bottom:6px;"><strong style="font-size:10pt;color:#555;">${label}:</strong><br><span style="white-space:pre-wrap;">${escHtml(value)}</span></div>`;
+    }
+    html += `</div>`;
+  }
+  preview.innerHTML = html;
+  document.getElementById('printModal').style.display = 'flex';
+}
+function closePrintModal() { document.getElementById('printModal').style.display = 'none'; }
+
+// ── Inicialização ───────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    patientsCache = await apiListPatients();
+    renderPatientList();
+  } catch(e) {
+    console.error('Falha inicial:', e);
+    showToast('Erro ao conectar ao backend. Verifique se o servidor Flask está rodando.', 'error');
+  }
+  document.getElementById('sessionDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('sig_date').value = new Date().toISOString().split('T')[0];
+  await checkPgxConnection();
+});
+</script>
+</body>
+</html>

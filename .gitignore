@@ -1,0 +1,4 @@
+# Parser de MEDLINE para o efetch do NCBI (pubmed)
+# Ignorados:
+#   - linhas de continuation (começam com espaço)
+#   - campos AU, JT, LR, etc (não usados no frontend)
