@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genética do Autismo — Estudos sobre Transmissão Materna e Expressão em Homens</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --radius: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    --font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Header Hero ──────────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+    padding: 60px 24px 40px;
+    text-align: center;
+    border-bottom: 1px solid rgba(56,189,248,0.15);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, rgba(56,189,248,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(129,140,248,0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(1.8rem, 5vw, 3rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero .subtitle {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 24px;
+    position: relative;
+  }
+  .hero .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(56,189,248,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(56,189,248,0.2);
+  }
+  .badge.purple { background: rgba(129,140,248,0.12); color: var(--accent2); border-color: rgba(129,140,248,0.2); }
+  .badge.green { background: rgba(52,211,153,0.12); color: var(--green); border-color: rgba(52,211,153,0.2); }
+  .hero .meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    position: relative;
+  }
+  .hero .meta a { color: var(--accent); text-decoration: none; }
+
+  /* ── Navegação ────────────────────────────────────────────── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,23,42,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(148,163,184,0.1);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  nav .nav-brand {
+    font-weight: 700;
+    color: var(--accent);
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  nav .nav-links {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+  nav .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: color 0.15s;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  nav .nav-links a:hover { color: #fff; background: rgba(255,255,255,0.05); }
+
+  /* ── Layout ────────────────────────────────────────────────── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* ── Seção Introdutória ───────────────────────────────────── */
+  .intro-card {
+    background: var(--surface);
+    border: 1px solid rgba(148,163,184,0.1);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 40px;
+  }
+  .intro-card h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+  .intro-card p { color: var(--text-muted); margin-bottom: 12px; }
+  .intro-card .highlight {
+    background: rgba(56,189,248,0.1);
+    border-left: 3px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+    font-size: 0.95rem;
+    color: #cbd5e1;
+  }
+  .intro-card .highlight strong { color: var(--accent); }
+
+  /* ── Diagrama X-linked ─────────────────────────────────────── */
+  .diagram-section {
+    margin-bottom: 40px;
+  }
+  .diagram-section h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+  .xlinked-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid rgba(148,163,184,0.1);
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .diagram-node {
+    background: var(--surface2);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 20px 24px;
+    text-align: center;
+    min-width: 160px;
+    position: relative;
+  }
+  .diagram-node.mother {
+    border-color: var(--amber);
+    background: rgba(251,191,36,0.08);
+  }
+  .diagram-node.son {
+    border-color: var(--red);
+    background: rgba(248,113,113,0.08);
+  }
+  .diagram-node .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .diagram-node .title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .diagram-node .detail {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .diagram-node .chromosome {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.2);
+    padding: 6px 10px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .diagram-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+  .diagram-arrow svg { width: 32px; height: 32px; }
+
+  .diagram-note {
+    background: rgba(129,140,248,0.08);
+    border-left: 3px solid var(--accent2);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+    color: #cbd5e1;
+  }
+  .diagram-note strong { color: var(--accent2); }
+
+  /* ── Cards de Estudos ─────────────────────────────────────── */
+  .studies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+  }
+  .study-card {
+    background: var(--surface);
+    border: 1px solid rgba(148,163,184,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+  .study-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(56,189,248,0.3);
+  }
+  .study-card .card-header {
+    padding: 16px 20px;
+    background: rgba(56,189,248,0.06);
+    border-bottom: 1px solid rgba(148,163,184,0.1);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .study-card .card-header .year {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    background: rgba(56,189,248,0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .study-card .card-header .journal {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .study-card .card-body {
+    padding: 16px 20px;
+    flex: 1;
+  }
+  .study-card .card-body h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .study-card .card-body .authors {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .study-card .card-body p {
+    font-size: 0.88rem;
+    color: #cbd5e1;
+    margin-bottom: 10px;
+  }
+  .study-card .card-body .findings {
+    background: rgba(0,0,0,0.15);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+  }
+  .study-card .card-body .findings li {
+    font-size: 0.82rem;
+    color: #cbd5e1;
+    margin-bottom: 4px;
+    padding-left: 16px;
+    position: relative;
+    list-style: none;
+  }
+  .study-card .card-body .findings li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+  .study-card .card-footer {
+    padding: 12px 20px;
+    border-top: 1px solid rgba(148,163,184,0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+  }
+  .study-card .card-footer .pmid {
+    font-family: var(--mono);
+    color: var(--text-muted);
+  }
+  .study-card .card-footer a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .study-card .card-footer a:hover { text-decoration: underline; }
+
+  /* ── Tabela de Genes ──────────────────────────────────────── */
+  .genes-section { margin-bottom: 40px; }
+  .genes-section h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #fff;
+  }
+  .genes-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    border: 1px solid rgba(148,163,184,0.1);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .genes-table thead {
+    background: rgba(56,189,248,0.08);
+  }
+  .genes-table th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .genes-table td {
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    color: #cbd5e1;
+    border-top: 1px solid rgba(148,163,184,0.06);
+    vertical-align: top;
+  }
+  .genes-table td:first-child { font-family: var(--mono); color: var(--accent); font-weight: 600; }
+  .genes-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .genes-table .xlink { color: var(--amber); font-weight: 600; }
+
+  /* ── Seção Conclusão ──────────────────────────────────────── */
+  .conclusion {
+    background: linear-gradient(135deg, rgba(56,189,248,0.06), rgba(129,140,248,0.06));
+    border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 40px;
+  }
+  .conclusion h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 16px;
+  }
+  .conclusion ul {
+    list-style: none;
+    padding: 0;
+  }
+  .conclusion li {
+    padding: 8px 0 8px 24px;
+    position: relative;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+  }
+  .conclusion li::before {
+    content: '◆';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 0.6rem;
+    top: 10px;
+  }
+
+  /* ── Footer ────────────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    border-top: 1px solid rgba(148,163,184,0.1);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+
+  /* ── Responsivo ───────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .hero { padding: 40px 16px 32px; }
+    .container { padding: 20px 16px 60px; }
+    .xlinked-diagram { flex-direction: column; }
+    .diagram-arrow { flex-direction: row; }
+    .studies-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<header class="hero">
+  <h1>Genética do <span>Autismo</span></h1>
+  <p class="subtitle">
+    Estudos sobre transmissão materna de variantes X-linked
+    e expressão clínica em filhos homens — revisão da literatura
+  </p>
+  <div class="badges">
+    <span class="badge">X-linked</span>
+    <span class="badge purple">NLGN3 · NLGN4X</span>
+    <span class="badge green">Maternal Carrier</span>
+    <span class="badge">Male Predominance</span>
+    <span class="badge purple">ASD · 4:1</span>
+  </div>
+  <p class="meta">
+    Revisão baseada em <strong>7 estudos</strong> publicados entre 2003–2023 &nbsp;·&nbsp;
+    Fontes: <a href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PubMed</a> /
+    <a href="https://pmc.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PMC</a> /
+    <a href="https://www.nature.com" target="_blank" rel="noopener">Nature</a>
+  </p>
+</header>
+
+<!-- ═══════════════ NAVEGAÇÃO ═══════════════ -->
+<nav>
+  <span class="nav-brand">🧬 Genética do Autismo</span>
+  <div class="nav-links">
+    <a href="#introducao">Introdução</a>
+    <a href="#diagrama">Mecanismo</a>
+    <a href="#estudos">Estudos</a>
+    <a href="#genes">Genes</a>
+    <a href="#conclusao">Conclusão</a>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- ═══════════ INTRODUÇÃO ═══════════ -->
+  <section id="introducao" class="intro-card">
+    <h2>O padrão que você perguntou</h2>
+    <p>
+      Filhos homens herdam <strong>um único cromossomo X</strong> da mãe e um Y do pai.
+      Qualquer gene mutado no X materno não tem cópia de backup no homem —
+      a mãe pode ser <strong>portadora assintomática</strong> e o filho homem
+      <strong>manifesta a condição</strong>. É o mesmo mecanismo do daltonismo e da hemofilia.
+    </p>
+    <p>
+      No Transtorno do Espectro Autista (ASD), vários genes candidatos nesse padrão
+      foram identificados em estudos publicados entre 2003 e 2023.
+      A prevalência de ASD é ~4× maior em homens que em mulheres,
+      e a genética X-linked é uma das explicações para esse bias sexual.
+    </p>
+    <div class="highlight">
+      <strong>Conceito-chave — Hemizigose X:</strong><br>
+      Homens são hemizigotos para o cromossomo X (XY): possuem apenas uma cópia de cada gene X.
+      Se essa cópia (recebida da mãe) está mutada, não há uma segunda cópia para compensar.
+      Mulheres (XX) têm duas cópias — mesmo com uma mutação, a outra pode compensar.
+    </div>
+  </section>
+
+  <!-- ═══════════ DIAGRAMA ═══════════ -->
+  <section id="diagrama" class="diagram-section">
+    <h2>Mecanismo de Transmissão X-linked</h2>
+
+    <div class="xlinked-diagram">
+      <div class="diagram-node mother">
+        <div class="label">MÃE (portadora)</div>
+        <div class="title">XX</div>
+        <div class="detail">
+          Heterozigota para<br>variante X-linked
+        </div>
+        <div class="chromosome">
+          X<sup>normal</sup> &nbsp;·&nbsp; X<sup>mutado</sup>
+        </div>
+        <div style="margin-top:10px;font-size:0.78rem;color:var(--amber);">
+          Assintomática ou sintomas leves
+        </div>
+      </div>
+
+      <div class="diagram-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 5v14M5 12l7 7 7-7"/>
+        </svg>
+        <span>transmite X</span>
+      </div>
+
+      <div class="diagram-node son">
+        <div class="label">FILHO HOMEM</div>
+        <div class="title">XY</div>
+        <div class="detail">
+          Hemizigoto para<br>o X materno
+        </div>
+        <div class="chromosome">
+          X<sup>mutado</sup> &nbsp;·&nbsp; Y
+        </div>
+        <div style="margin-top:10px;font-size:0.78rem;color:var(--red);">
+          Expressão clínica → ASD
+        </div>
+      </div>
+    </div>
+
+    <div class="diagram-note">
+      <strong>Por que só os homens expressam?</strong> A mãe carrega duas cópias do gene
+      (uma normal, uma mutada) — a normal compensa e ela não desenvolve ASD.
+      O filho homem recebe apenas o X mutado (não tem segunda cópia) e manifesta
+      a condição. Irmãs podem herdar o X mutado mas também têm o X normal → geralmente assintomáticas.
+    </div>
+  </section>
+
+  <!-- ═══════════ ESTUDOS ═══════════ -->
+  <section id="estudos">
+    <h2 style="font-size:1.3rem;font-weight:600;color:#fff;margin-bottom:20px;">
+      Estudos Revisados
+    </h2>
+
+    <div class="studies-grid">
+
+      <!-- Estudo 1 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2003</span>
+          <div>
+            <div class="journal">Nature Genetics · 34(1):27–9</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Mutations of the X-linked genes encoding neuroligins NLGN3 and NLGN4 are associated with autism</h3>
+          <div class="authors">Jamain S, Quach H, Betancur C, et al.</div>
+          <p>
+            Estudo fundacional que identificou as primeiras mutações em genes X-linked
+            associados ao ASD. Duas famílias suecas com irmãos afetados.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>NLGN3 R451C (missense) — 2 irmãos com ASD, mãe portadora assintomática</li>
+              <li>NLGN4 1186insT (frameshift) — 2 irmãos, mãe saudável sem a mutação na avó</li>
+              <li>Primeira evidência de mutações de novo no X associadas ao autismo</li>
+              <li>NLGN3 no Xq13.1 e NLGN4 no Xp22.3</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMC · Nat Genet 2003</span>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/12660727" target="_blank" rel="noopener">PubMed →</a>
+        </div>
+      </article>
+
+      <!-- Estudo 2 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2004</span>
+          <div>
+            <div class="journal">Molecular Psychiatry · 9(2):177–84</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>A substitution involving the NLGN4 gene associated with autistic behavior — Grande família francesa</h3>
+          <div class="authors">Laumonnier F, Bonnet-Brilhault F, Gomot M, et al.</div>
+          <p>
+            Identificou uma deleção de 2 pares de bases no NLGN4X em 13 homens
+            de uma única família francesa com fenótipo ASD/ID.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>c.1253del(AG) no NLGN4X → stop codon em posição 429</li>
+              <li>13 homens afetados (ASD, ID, ou Pervasive Developmental Disorder)</li>
+              <li>Todas as mulheres portadoras foram assintomáticas</li>
+              <li>Confirma padrão X-linked recessivo: mãe → filhos homens</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMID: 15274046</span>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/15274046" target="_blank" rel="noopener">PubMed →</a>
+        </div>
+      </article>
+
+      <!-- Estudo 3 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2011</span>
+          <div>
+            <div class="journal">Behavioral and Brain Functions · 7:23</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Sex-specific association of common variants of NLGN3 and NLGN4X with ASD — Chinese Han cohort</h3>
+          <div class="authors">Xu X, et al. (Grupo chinês)</div>
+          <p>
+            Estudo de associação que mostrou variantes comuns no NLGN3 associadas ao ASD
+            apenas em homens, reforçando o bias sexual.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>SNP rs4844285 no NLGN3 associado ao ASD em homens (p-corrigido = 0.048)</li>
+              <li>OR = 1.872 (IC 95%: 1.175–2.981) — apenas em homens</li>
+              <li>Haplótipos NLGN3 associados ao ASD masculino (global P = 0.032)</li>
+              <li>234 pacientes ASD + 260 controles (Chinese Han)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMC3120659</span>
+          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3120659" target="_blank" rel="noopener">PMC →</a>
+        </div>
+      </article>
+
+      <!-- Estudo 4 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2020</span>
+          <div>
+            <div class="journal">Biological Psychiatry · 88(6):480–487</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Inherited Risk for Autism through Maternal and Paternal Lineage</h3>
+          <div class="authors">Sandin S, et al. (Karolinska Institutet + Mount Sinai)</div>
+          <p>
+            Estudo populacional sueco com 847.732 crianças.
+            Avaliou risco de ASD em netos de sogras/sobros com ASD.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>Filhos de mãe com irmã com ASD: RR = 3.05 (IC 95%: 2.52–3.64)</li>
+              <li>Filhos de pai com irmão com ASD: RR = 2.08 (IC 95%: 1.53–2.67)</li>
+              <li>Transmissão materna é mais forte que paterna</li>
+              <li>847.732 crianças analisadas — o maior estudo populacional até 2020</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMID: 32430199</span>
+          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7483301" target="_blank" rel="noopener">PMC →</a>
+        </div>
+      </article>
+
+      <!-- Estudo 5 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2023</span>
+          <div>
+            <div class="journal">Nature Communications · 14:8227</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Rare X-linked variants carry predominantly male risk in ASD, Tourette Syndrome, and ADHD</h3>
+          <div class="authors">Wang S, Willsey AJ, et al. (68 autores, UCSF-led)</div>
+          <p>
+            Análise de grande escala de exomes demonstrando que variantes raras no
+            cromossomo X aumentam o risco principalmente em homens para ASD, Tourette e TDAH.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>Variantes X-linked raras têm efeito predominantemente masculino</li>
+              <li>"Female Protective Effect" — mulheres precisam de maior carga genética</li>
+              <li>Consistente com o ratio 4:1 homens/mulheres no ASD</li>
+              <li>Publicado em Nature Communications — 26 citações desde 2023</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMC10700338</span>
+          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10700338" target="_blank" rel="noopener">PMC →</a>
+        </div>
+      </article>
+
+      <!-- Estudo 6 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2023</span>
+          <div>
+            <div class="journal">International Journal of Molecular Sciences</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>NLGN3 autism variants have distinct functional impact on synapses and sleep behavior in Drosophila</h3>
+          <div class="authors">Grundei M, et al.</div>
+          <p>
+            Estudo funcional com modelo de Drosophila que mostrou que variantes
+            maternamente herdadas no NLGN3 têm impacto distinto em sinapses.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>23+ variantes NLGN3 associadas ao ASD, a maioria herdadas maternalmente</li>
+              <li>13 maternamente herdadas — apenas observadas em homens afetados</li>
+              <li>5 de novo — observadas em homens e mulheres</li>
+              <li>Variantes maternas e de novo podem ter mecanismos diferentes</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMC13041802</span>
+          <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC13041802" target="_blank" rel="noopener">PMC →</a>
+        </div>
+      </article>
+
+      <!-- Estudo 7 -->
+      <article class="study-card">
+        <div class="card-header">
+          <span class="year">2006</span>
+          <div>
+            <div class="journal">American Journal of Medical Genetics Part B</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <h3>Mutation screening of X-chromosomal neuroligin genes: no mutations in 196 autism probands</h3>
+          <div class="authors">Blasi F, et al.</div>
+          <p>
+            Screen negativo — reforça que mutações nos neuroliginas são <strong>raras</strong>
+            no ASD geral. Importante por contextualizar a prevalência.
+          </p>
+          <div class="findings">
+            <ul>
+              <li>196 probandos com ASD/Asperger screenados para NLGN3 e NLGN4</li>
+              <li>Nenhuma mutação encontrada — reforça raridade</li>
+              <li>Contribuição importante: as mutações existem, mas são eventos raros</li>
+              <li>Sugestão: NLGN3/4 podem ser mais relevantes em casos com MR (retardo mental)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="pmid">PMID: 16419091</span>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/16419091" target="_blank" rel="noopener">PubMed →</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ═══════════ TABELA DE GENES ═══════════ -->
+  <section id="genes" class="genes-section">
+    <h2>Genes X-linked Relevantes no Autismo</h2>
+    <table class="genes-table">
+      <thead>
+        <tr>
+          <th>Gene</th>
+          <th>Localização</th>
+          <th>Herança</th>
+          <th>Estudo-chave</th>
+          <th>Padrão observado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>NLGN3</td>
+          <td>Xq13.1</td>
+          <td class="xlink">X-linked (maternal)</td>
+          <td>Jamain et al., 2003 · PMC · Nat Genet</td>
+          <td>Mutação R451C → 2 irmãos com ASD, mãe portadora assintomática</td>
+        </tr>
+        <tr>
+          <td>NLGN4X</td>
+          <td>Xp22.3</td>
+          <td class="xlink">X-linked recessivo</td>
+          <td>Laumonnier et al., 2004 · Mol Psychiatry</td>
+          <td>13 homens afetados numa família, mães assintomáticas</td>
+        </tr>
+        <tr>
+          <td>MECP2</td>
+          <td>Xq28</td>
+          <td class="xlink">Dominante ligado ao X</td>
+          <td>Amir et al., 1999 · Nat Genet</td>
+          <td>Síndrome de Rett: afeta principalmente meninas; em homens, geralmente letal neonatal</td>
+        </tr>
+        <tr>
+          <td>FMR1</td>
+          <td>Xq27.3</td>
+          <td class="xlink">Dominante (penetrância variável)</td>
+          <td>Fu et al., 1991 · Science · Síndrome do X Frágil</td>
+          <td>Mães portadoras de pré-mutações têm risco de filhos (homens mais afetados) com FXS + ASD</td>
+        </tr>
+        <tr>
+          <td>NLGN4Y</td>
+          <td>Yq11.2</td>
+          <td>Específico do homem (Y-linked)</td>
+          <td>Jamain et al., 2003 · paralog de NLGN4X</td>
+          <td>Par de genes X-Y; diverged de NLGN4X; possivelmente relevante no bias sexual</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-top:12px;">
+      <strong>Nota:</strong> Estes são genes com evidência de associação ao ASD via transmissão
+      X-linked. A maioria dos casos de ASD (idiopático) é multifatorial com contribuição
+      de muitos genes autossômicos. Estes exemplos representam a parte do espectro
+      com padrão de herança clara.
+    </p>
+  </section>
+
+  <!-- ═══════════ CONCLUSÃO ═══════════ -->
+  <section id="conclusao" class="conclusion">
+    <h2>Síntese — O que a ciência conclui</h2>
+    <ul>
+      <li>Genes X-linked, especialmente <strong>NLGN3</strong> (Xq13.1) e <strong>NLGN4X</strong> (Xp22.3),
+        são associados ao ASD via transmissão maternal para filhos homens.</li>
+      <li>Mães portadoras de variantes nessas genes são frequentemente <strong>assintomáticas</strong>
+        ou com sintomas muito leves — o efeito é mais grave nos filhos homens (hemizigotos).</li>
+      <li>O padrão é o de <strong>herança X-linked recessiva</strong>: mãe heterozigota →
+        filhos homens afetados; filhas geralmente portadoras assintomáticas.</li>
+      <li>O estudo de Sandin et al. (2020, 847K crianças) mostrou que a transmissão
+        <strong>materna é mais forte</strong> que paterna no risco de ASD, consistente com genes X-linked.</li>
+      <li>Wang et al. (2023, Nature Communications) confirmaram: variantes raras no cromossomo X
+        têm risco <strong>predominantemente masculino</strong> para ASD, Tourette e TDAH.</li>
+      <li>O <strong>"Female Protective Effect"</strong> (efeito protetor feminino) é uma hipótese
+        amplamente sustentada: meninas precisam de maior carga genética para manifestar ASD,
+        o que explica o ratio 4:1 homens/mulheres.</li>
+      <li>Mutações nos neuroliginas são <strong>raras no ASD geral</strong> (Blasi et al., 2006 —
+        screen negativo em 196 probandos) — representam um subgrupo, não a maioria dos casos.</li>
+    </ul>
+  </section>
+
+</div>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <p>
+    Mini-site gerado com base em revisão da literatura (PubMed/PMC/Nature).
+    Todos os estudos citados são artigos científicos publicados e peer-reviewed.
+    <br>
+    <a href="https://github.com/elsieneurogen-rgb/medical_soap" target="_blank" rel="noopener">
+      elsieneurogen-rgb/medical_soap
+    </a>
+    · Gerado em 2026
+  </p>
+</footer>
+
+</body>
+</html>
